@@ -90,87 +90,72 @@ if __name__=='__main__':
     
     # Sample size
     sample_size = 1000
-    df_Xtrain = df_Xtrain.sample(n=sample_size, random_state=42)
-    y_train = y_train.sample(n=sample_size,random_state=42)
-    y_test = y_test.sample(n=sample_size,random_state=42)
-    df_Xtest = df_Xtest.sample(n=sample_size, random_state=42)
+    df_Xtrain = df_Xtrain
+    y_train = y_train
+    y_test = y_test
+    df_Xtest = df_Xtest
+    
+    
+    # Batch size
+    batch_size = 256
 
-# # Randomly select indices for sampling
-#     train_indices = np.random.choice(df_Xtrain.shape[0], sample_size, replace=False)
-#     test_indices = np.random.choice(df_Xtest.shape[0], sample_size, replace=False)
+# Split data into batches
+    def create_batches(X, y, batch_size):
+        num_batches = len(X) // batch_size
+        batches = []
+        for i in range(num_batches):
+            start = i * batch_size
+            end = (i + 1) * batch_size
+            batches.append((X[start:end], y[start:end]))
+        if len(X) % batch_size != 0:
+            batches.append((X[num_batches * batch_size:], y[num_batches * batch_size:]))
+        return batches
+    train_batches = create_batches(df_Xtrain, y_train, batch_size)
+    test_batches = create_batches(df_Xtest, y_test, batch_size)
     
-#     print(train_indices.shape)
-
-# # Select samples from X_train, y_train, X_test, and y_test arrays
-#     df_Xtrain = df_Xtrain[train_indices]
-#     y_train = y_train[train_indices]
-#     df_Xtest = df_Xtest[test_indices]
-#     y_test = y_test[test_indices]
+    model_configs = [
+    {"name": "Model 1", "layers": [Linear(input_size=X_train.shape[1], output_size=64), ReLu(), Linear(input_size=64, output_size=1), Sigmoid()]},
+    {"name": "Model 2", "layers": [Linear(input_size=X_train.shape[1], output_size=128), ReLu(), Linear(input_size=128, output_size=64), ReLu(), Linear(input_size=64, output_size=1), Sigmoid()]},
+    {"name": "Model 3", "layers": [Linear(input_size=X_train.shape[1], output_size=32), ReLu(), Linear(input_size=32, output_size=32), ReLu(), Linear(input_size=32, output_size=1), Sigmoid()]}
+]
     
-
     
-    # sample_size = 1000  # Adjust the sample size based on your dataset size
-  
-    # y_train = y_train.sample(n=sample_size,random_state=42)
-    # y_test = y_test.sample(n=sample_size,random_state=42)
-    # df_Xtest = df_Xtest.sample(n=sample_size, random_state=42)
-    
-    def train_model(X_train, y_train, X_val, y_val, num_layers, num_nodes, epochs=100, learning_rate=0.01):
+    # Training loop
+    for config in model_configs:
+        print("Training", config["name"])
         model = Sequential()
-        model.add(Linear(X_train.shape[1], num_nodes))
-        model.add(ReLu())
-    
-        for _ in range(num_layers - 1):
-            model.add(Linear(num_nodes, num_nodes))
-            model.add(Sigmoid())
-            
-    
-        model.add(Linear(num_nodes, 1))
-        model.add(Sigmoid())
-        loss_fn = BinaryCrossEntropyLoss()
-
+        for layer in config["layers"]:
+            model.add(layer)
+        epochs = 100
+        learning_rate = 0.001
         train_losses = []
         val_losses = []
-
         for epoch in range(epochs):
-            # Training
-            print(y_train.shape, X_val.shape, y_val.shape)
-            output_train = model.forward(X_train)
-            print(output_train.shape)
-            print(y_train.shape)
-            loss_train = np.mean(loss_fn.forward(output_train, y_train))
-            train_losses.append(loss_train)
-            gradient = loss_fn.backward("")
-            print(gradient.shape)
-            model.backward(gradient)
-
-            # Validation
-            output_val = model.forward(X_val)
-            loss_val = loss_fn.forward(output_val, y_val)
-            val_losses.append(loss_val)
-
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch}: Train Loss {loss_train}, Val Loss {loss_val}")
-
+            total_train_loss = 0
+            for X_batch, y_batch in train_batches:
+                Binary = BinaryCrossEntropyLoss()
+                y_pred = model.forward(X_batch)
+                loss = Binary.forward(y_pred, np.array(y_batch).reshape(-1, 1))
+                total_train_loss += loss
+                grad_loss = Binary.backward()
+                model.backward(grad_loss)
+            # Update weights and biases
+                for layer in model.layers:
+                        if isinstance(layer, Linear):
+                            layer.weights -= learning_rate * layer.grad_weights
+                            layer.bias -= learning_rate * layer.grad_bias.reshape(layer.bias.shape)
+            avg_train_loss = total_train_loss / len(train_batches)
+            train_losses.append(avg_train_loss)
+        # Validation loss
+            total_val_loss = 0
+            for X_batch, y_batch in test_batches:
+                y_pred = model.forward(X_batch)
+                loss = BinaryCrossEntropyLoss().forward(y_pred, np.array(y_batch).reshape(-1, 1))
+                total_val_loss += loss
+            avg_val_loss = total_val_loss / len(test_batches)
+            val_losses.append(avg_val_loss)
+            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}")
         # Early stopping
-            if len(val_losses) > 3 and val_losses[-1] > val_losses[-2] > val_losses[-3] > val_losses[-4]:
-                print("Early stopping.")
+            if epoch > 2 and val_losses[-1] >= val_losses[-2] >= val_losses[-3]:
+                print("Early stopping...")
                 break
-
-        return train_losses, val_losses
-    
-    # Experiment with different configurations
-    configs = [(2, 32), (3, 64), (4, 128)]  # Example configurations (num_layers, num_nodes)
-    all_train_losses = []
-    all_val_losses = []
-    
-    X_train, X_val, y_train, y_val = train_test_split(df_Xtrain, y_train, test_size=0.2, random_state=42)
-
-    
-    
-    for config in configs:
-        print(f"Training model with {config[0]} layers and {config[1]} nodes per layer...")
-        train_losses, val_losses = train_model(X_train, y_train, X_val, y_val, num_layers=config[0], num_nodes=config[1])
-        all_train_losses.append(train_losses)
-        all_val_losses.append(val_losses)
-   

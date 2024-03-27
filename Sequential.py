@@ -16,7 +16,7 @@ class Sequential(Layer):
     
     def backward(self,grad):
         for layer in reversed(self.layers):
-            #print("type of layer:",type(layer))
+            print("type of layer:",type(layer))
             print("type of grad",type(grad))
             grad = layer.backward(grad)
         return grad
@@ -25,8 +25,8 @@ class Sequential(Layer):
         weights = [layer.weights for layer in self.layers if hasattr(layer, 'weights')]
         biases = [layer.bias for layer in self.layers if hasattr(layer, 'bias')]
         
-        print("Shape of weights:",(len(weights),len(weights[0])))
-        print("Shape ofbiases:",(len(biases),len(biases[0])))
+        # print("Shape of weights:",(len(weights),len(weights[0])))
+        # print("Shape ofbiases:",(len(biases),len(biases[0])))
         for i, (weight, bias) in enumerate(zip(weights, biases)):
             np.savez(f"layer_{i}_weights.npz", weights=weight)
             np.savez(f"layer_{i}_biases.npz", biases=bias)
