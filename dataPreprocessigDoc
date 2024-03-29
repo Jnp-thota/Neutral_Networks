@@ -1,0 +1,11 @@
+Data Preprocessing:
+    > Did the Null check and removed the all the NULL values from the dataset.
+    > Check the type of the columns 
+        > Convert column type to appropirate values 
+        > from Date and time column we extract the day,month, year, minute, hours and seconds..
+        >  Convert the categorical variable to numeric values
+        > Removed unwanted columns by knowing the correlation with the target variable.
+        > Depends on the latitude and longitude values found the distance traveled using Haversine.
+
+
+ 

@@ -16,8 +16,8 @@ class Sequential(Layer):
     
     def backward(self,grad):
         for layer in reversed(self.layers):
-            print("type of layer:",type(layer))
-            print("type of grad",type(grad))
+            # print("type of layer:",type(layer))
+            # print("type of grad",type(grad))
             grad = layer.backward(grad)
         return grad
     
